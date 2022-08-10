@@ -5,37 +5,51 @@ DOMAIN = 'https://api.hh.ru/'
 url = f'{DOMAIN}vacancies'
 key_word = input('Введите ключевое слово: ')
 
-params = {
-    'text': f'{key_word}',
-    'page': 1
-}
+params = {'text': f'{key_word}'}
 result = requests.get(url, params=params)
-print(result.status_code)
 data_json = result.json()
 
 # pprint.pprint(data_json)
-#
-# print(len(data_json), type(data_json))
-# for i in data_json:
-#     print(i, ' - ', type(data_json[i]))
+
+print(type(data_json), len(data_json), data_json.keys())
+print(data_json['items'][0]['snippet']['requirement'])
 
 print('Всего страниц: ', data_json['pages'])
 print('Длина - ', len(data_json['items']), 'Тип -', type(data_json['items']))
 
-sum_salary = 0
-count_salary = 0
-for i in data_json['items']:
-    #TODO доделать конвертирование из разных валют
 
-    if i['salary'] is not None:
-        if i['salary']['to'] is not None and i['salary']['from'] is not None:
-            sum_salary += (i['salary']['to'] + i['salary']['from']) / 2
-            count_salary += 1
-        elif i['salary']['to'] is not None:
-            sum_salary += i['salary']['to']
-            count_salary += 1
-        elif i['salary']['from'] is not None:
-            sum_salary += i['salary']['from']
-            count_salary += 1
+def calculation_of_the_average_salary(data_dic):
+    sum_salary = 0
+    count_salary = 0
 
-print(sum_salary / count_salary)
+    for j in range(data_dic['pages'] - 1):
+        params = {'text': f'{key_word}', 'page': j}
+        data_dic = requests.get(url, params=params).json()
+
+        for item in data_dic['items']:
+            # TODO доделать конвертирование из разных валют
+            if item['salary'] is not None:
+                if item['salary']['to'] is not None and item['salary']['from'] is not None:
+                    sum_salary += (item['salary']['to'] + item['salary']['from']) / 2
+                    count_salary += 1
+                elif item['salary']['to'] is not None:
+                    sum_salary += item['salary']['to']
+                    count_salary += 1
+                elif item['salary']['from'] is not None:
+                    sum_salary += item['salary']['from']
+                    count_salary += 1
+    return round(sum_salary / count_salary)
+
+def analysis_requirements(data_dic):
+    requirements_list = []
+    for j in range(data_dic['pages'] - 1):
+        params = {'text': f'{key_word}', 'page': j}
+        data_dic = requests.get(url, params=params).json()
+        for item in data_dic['items']:
+            #TODO  отпарсить на какие-то конкретные требования
+            requirements_list.append(item['snippet']['requirement'])
+
+    #TODO посчитать в requirements_list сколько повторений и записать в словарь дле return
+
+
+#print(calculation_of_the_average_salary(data_json))
