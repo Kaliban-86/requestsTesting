@@ -40,16 +40,19 @@ def calculation_of_the_average_salary(data_dic):
                     count_salary += 1
     return round(sum_salary / count_salary)
 
+
 def analysis_requirements(data_dic):
     requirements_list = []
+
     for j in range(data_dic['pages'] - 1):
         params = {'text': f'{key_word}', 'page': j}
         data_dic = requests.get(url, params=params).json()
+
         for item in data_dic['items']:
-            #TODO  отпарсить на какие-то конкретные требования
-            requirements_list.append(item['snippet']['requirement'])
+            # TODO  отпарсить на какие-то конкретные требования
+            if item['snippet']['requirement'] is not None:
+                requirements_list.append(item['snippet']['requirement'])
 
-    #TODO посчитать в requirements_list сколько повторений и записать в словарь дле return
+    # TODO посчитать в requirements_list сколько повторений и записать в словарь дле return
 
-
-#print(calculation_of_the_average_salary(data_json))
+# print(calculation_of_the_average_salary(data_json))
