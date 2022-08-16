@@ -1,47 +1,64 @@
 import requests
+import re
 import pprint
+from collections import Counter
+from json import dump as jdump
 
 DOMAIN = 'https://api.hh.ru/'
 url = f'{DOMAIN}vacancies'
 key_word = input('Введите ключевое слово: ')
+final_result = {'name': key_word}
 
 params = {'text': f'{key_word}'}
 result = requests.get(url, params=params)
 data_json = result.json()
+pages_count = data_json['pages']
+vac_count = data_json['found']
+
+final_result['pages'] = pages_count
+final_result['vacancies_on_pages'] = vac_count
+
 
 # pprint.pprint(data_json)
 
-print(type(data_json), len(data_json), data_json.keys())
-print(data_json['items'][0]['snippet']['requirement'])
-
-print('Всего страниц: ', data_json['pages'])
-print('Длина - ', len(data_json['items']), 'Тип -', type(data_json['items']))
-
-
 def calculation_of_the_average_salary(data_dic):
+    global curr
     sum_salary = 0
     count_salary = 0
+    none_count = 0
 
-    for j in range(data_dic['pages'] - 1):
+    for j in range(data_dic['pages']):
         params = {'text': f'{key_word}', 'page': j}
         data_dic = requests.get(url, params=params).json()
 
         for item in data_dic['items']:
             # TODO доделать конвертирование из разных валют
-            if item['salary'] is not None:
+            curr_koeff = 1
+            if item['salary'] == None:
+                none_count += 1
+
+            if item['salary'] is not None and (
+                    item['salary']['currency'] == None or item['salary']['currency'] == 'RUR' or item['salary'][
+                'currency'] == 'USD'):
+
+                if item['salary']['currency'] == 'USD':
+                    curr_koeff = 61
+
                 if item['salary']['to'] is not None and item['salary']['from'] is not None:
-                    sum_salary += (item['salary']['to'] + item['salary']['from']) / 2
+                    sum_salary += ((item['salary']['to'] * curr_koeff + item['salary']['from'] * curr_koeff) / 2)
                     count_salary += 1
                 elif item['salary']['to'] is not None:
-                    sum_salary += item['salary']['to']
+                    sum_salary += (item['salary']['to']) * curr_koeff
                     count_salary += 1
                 elif item['salary']['from'] is not None:
-                    sum_salary += item['salary']['from']
+                    sum_salary += (item['salary']['from']) * curr_koeff
                     count_salary += 1
-    return round(sum_salary / count_salary)
+
+    return round(sum_salary / count_salary), count_salary, none_count
 
 
 def analysis_requirements(data_dic):
+    global skills_set
     requirements_list = []
 
     for j in range(data_dic['pages'] - 1):
@@ -51,8 +68,30 @@ def analysis_requirements(data_dic):
         for item in data_dic['items']:
             # TODO  отпарсить на какие-то конкретные требования
             if item['snippet']['requirement'] is not None:
-                requirements_list.append(item['snippet']['requirement'])
+                skills_list = re.findall(r'\s[A-Za-z-?]+', item['snippet']['requirement'])
+                skills_set = set(x.strip(' -').lower() for x in skills_list)
+
+            for skill in skills_set:
+                # if not any(skill in x for x in requirements_list):
+                requirements_list.append(skill)
 
     # TODO посчитать в requirements_list сколько повторений и записать в словарь дле return
+    return requirements_list
 
-# print(calculation_of_the_average_salary(data_json))
+
+add = []
+skills_with_counter = Counter(analysis_requirements(data_json))
+for name, count in skills_with_counter.most_common(5):
+    add.append({'name': name, 'count': count})
+
+sal_tupl = calculation_of_the_average_salary(data_json)
+final_result['RUR_and_USD_salary_find'] = sal_tupl[1]
+final_result['NONE_salary_vac_find'] = sal_tupl[2]
+final_result['average_salary'] = sal_tupl[0]
+final_result['not_RUR_and_USA_salary_find'] = vac_count - sal_tupl[1] - sal_tupl[2]
+final_result['skills'] = add
+
+#pprint.pprint(final_result)
+
+with open('resul.json', 'w') as f:
+    jdump([final_result], f)
