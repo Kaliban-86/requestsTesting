@@ -1,9 +1,11 @@
 from pycbrf import ExchangeRates
-import re
-
+import json
+import pprint
 # rate = ExchangeRates()
 
 # print(rate['USD'].value)
 
-test_re = re.findall(r'\s[A-Za-z-?]+', 'мамафывыфвы ssfd dsfdf t st ')
-print(test_re)
+with open('resul.json', 'r') as f:
+    res = json.load(f)
+
+pprint.pprint(res)
