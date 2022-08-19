@@ -58,22 +58,17 @@ def calculation_of_the_average_salary(data_dic):
 
 
 def analysis_requirements(data_dic):
-    global skills_set
     requirements_list = []
 
-    for j in range(data_dic['pages'] - 1):
+    for j in range(data_dic['pages']):
         params = {'text': f'{key_word}', 'page': j}
         data_dic = requests.get(url, params=params).json()
 
         for item in data_dic['items']:
-            # TODO  отпарсить на какие-то конкретные требования
-            if item['snippet']['requirement'] is not None:
-                skills_list = re.findall(r'\s[A-Za-z-?]+', item['snippet']['requirement'])
-                skills_set = set(x.strip(' -').lower() for x in skills_list)
-
-            for skill in skills_set:
-                # if not any(skill in x for x in requirements_list):
-                requirements_list.append(skill)
+            vak_res = requests.get(item['url']).json()
+            if vak_res['key_skills'] is not None:
+                for k in vak_res['key_skills']:
+                    requirements_list.append(k['name'])
 
     # TODO посчитать в requirements_list сколько повторений и записать в словарь дле return
     return requirements_list
@@ -81,7 +76,7 @@ def analysis_requirements(data_dic):
 
 add = []
 skills_with_counter = Counter(analysis_requirements(data_json))
-for name, count in skills_with_counter.most_common(5):
+for name, count in skills_with_counter.most_common(10):
     add.append({'name': name, 'count': count})
 
 sal_tupl = calculation_of_the_average_salary(data_json)
@@ -91,7 +86,7 @@ final_result['average_salary'] = sal_tupl[0]
 final_result['not_RUR_and_USA_salary_find'] = vac_count - sal_tupl[1] - sal_tupl[2]
 final_result['skills'] = add
 
-#pprint.pprint(final_result)
+
 
 with open('resul.json', 'w') as f:
     jdump([final_result], f)
